@@ -13,71 +13,48 @@ use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Schema {
+pub struct Document {
     pub openapi: String,
     pub info: Info,
-    pub paths: LinkedHashMap<String, LinkedHashMap<String, Operation>>,
+    pub paths: Paths,
     pub components: Components,
-    pub tags: Vec<Tag>,
+    pub tags: Option<Vec<Tag>>,
 }
+
+pub type Paths = LinkedHashMap<String, PathItem>;
+pub type PathItem = LinkedHashMap<String, Operation>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Components {
-    pub schemas: LinkedHashMap<String, SchemaValue>,
+    pub schemas: LinkedHashMap<String, Schema>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct SchemaValue {
+pub struct Schema {
     #[serde(rename = "type")]
     pub schema_type: Option<Type>,
-    pub description: Option<String>,
-    #[serde(rename = "enum")]
-    pub schema_enum: Option<Vec<String>>,
-    pub additional_properties: Option<PropertyAdditionalProperties>,
-    pub properties: Option<LinkedHashMap<String, Property>>,
-    pub required: Option<Vec<String>>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
-pub struct Property {
-    #[serde(rename = "type")]
-    pub property_type: Option<Type>,
     pub format: Option<Format>,
     pub minimum: Option<i64>,
+    pub description: Option<String>,
     #[serde(rename = "$ref")]
-    pub property_ref: Option<String>,
-    pub additional_properties: Option<PropertyAdditionalProperties>,
-    pub items: Option<AdditionalProperties>,
-    pub required: Option<bool>,
+    pub schema_ref: Option<String>,
+    #[serde(rename = "enum")]
+    pub schema_enum: Option<Vec<String>>,
+    pub additional_properties: Option<Box<AdditionalProperties>>,
+    pub properties: Option<LinkedHashMap<String, Schema>>,
+    pub items: Option<Box<Schema>>,
+    pub required: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
 #[serde(deny_unknown_fields)]
-pub enum PropertyAdditionalProperties {
+pub enum AdditionalProperties {
     Bool(bool),
-    ItemsAdditionalProperties(AdditionalProperties),
-}
-
-// Avoid an alloc
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
-pub struct AdditionalProperties {
-    #[serde(rename = "type")]
-    pub property_type: Option<Type>,
-    pub format: Option<Format>,
-    pub minimum: Option<i64>,
-    #[serde(rename = "$ref")]
-    pub property_ref: Option<String>,
-    pub additional_properties: Option<Box<PropertyAdditionalProperties>>,
-    pub items: Option<Box<PropertyAdditionalProperties>>,
-    pub required: Option<bool>,
+    Schema(Schema),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -120,7 +97,7 @@ pub struct Info {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Operation {
-    pub description: String,
+    pub description: Option<String>,
     pub operation_id: String,
     pub parameters: Vec<Parameter>,
     pub responses: Option<LinkedHashMap<String, Responses>>,
@@ -134,9 +111,15 @@ pub struct Operation {
 pub struct Parameter {
     #[serde(rename = "in")]
     pub parameter_in: In,
+    #[serde(rename = "enum")]
+    pub parameter_enum: Option<Vec<String>>,
+    pub description: Option<String>,
+    pub format: Option<Format>,
     pub name: String,
     pub required: Option<bool>,
-    pub schema: Option<AdditionalProperties>,
+    pub schema: Option<Schema>,
+    #[serde(rename = "type")]
+    pub parameter_type: Option<Type>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -163,7 +146,7 @@ pub struct Content {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ApplicationJson {
-    pub schema: Option<Property>,
+    pub schema: Option<Schema>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
