@@ -39,21 +39,21 @@ pub async fn extended_help() -> Result<ExtendedHelp, Error> {
     let mut full_endpoints = Vec::<serde_json::Value>::new();
 
     // Get help for all types
-    for ty_name in help.types.keys().take(10) {
+    for ty_name in help.types.keys() {
         let endpoint = format!("/help?target={}&format=Full", ty_name);
         let SeqFirst::<Type>(full) = lcu.post(endpoint, "").await?;
         full_types.push(full);
     }
 
     // Get help for all events
-    for ev_name in help.events.keys().take(10) {
+    for ev_name in help.events.keys() {
         let endpoint = format!("/help?target={}&format=Full", ev_name);
         let SeqFirst::<Event>(full) = lcu.post(endpoint, "").await?;
         full_events.push(full);
     }
 
     // Get help for all endpoints
-    for fn_name in help.functions.keys().take(10) {
+    for fn_name in help.functions.keys() {
         let endpoint = format!("/help?target={}&format=Full", fn_name);
         let SeqFirst::<Endpoint>(mut full) = lcu.post(endpoint, "").await?;
 
