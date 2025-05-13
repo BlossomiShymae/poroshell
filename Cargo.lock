@@ -972,6 +972,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
+name = "poro_schema"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "fxhash",
+ "irelia",
+ "itertools 0.14.0",
+ "regex",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "powerfmt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1261,20 +1275,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f29ebaa345f945cec9fbbc532eb307f0fdad8161f281b6369539c8d84876b3d"
 dependencies = [
  "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "schema"
-version = "0.1.0"
-dependencies = [
- "derive_more",
- "fxhash",
- "irelia",
- "itertools 0.14.0",
- "regex",
- "serde",
- "serde_json",
- "tokio",
 ]
 
 [[package]]

@@ -5,10 +5,15 @@ use openapi::{ OpenApiInfo, OpenApiSpec };
 use patch::Patch;
 use help::{ ConsoleEndpointInner, Endpoint, Event, ExtendedHelp, Help, SeqFirst, Type };
 
-mod help;
-mod error;
-mod openapi;
-mod patch;
+/// `use poro_schema::prelude::*;` to import common traits and types.
+pub mod prelude {
+    pub use super::{ lcu, PoroSchema, help::ExtendedHelp, openapi::OpenApiSpec };
+}
+
+pub mod help;
+pub mod error;
+pub mod openapi;
+pub mod patch;
 
 /// Pattern: `apply_patches!(to: $jsons, name_lens: $name_lens, patches: [ ($name, $($path, $value),*), ... ])`
 macro_rules! apply_patches {
@@ -36,12 +41,14 @@ pub fn lcu() -> Result<LcuClient<irelia::requests::RequestClientType>, Error> {
     Ok(lcu)
 }
 
-trait PoroSchema {
+pub trait PoroSchema {
     /// Construct [`ExtendedHelp`] using the LCU API.
-    async fn extended_help(&self) -> Result<ExtendedHelp, Error>;
+    fn extended_help(
+        &self
+    ) -> impl std::future::Future<Output = Result<ExtendedHelp, Error>> + Send;
 
     /// Construct [`OpenApiSpec`] using the LCU API.
-    async fn openapi(&self) -> Result<OpenApiSpec, Error>;
+    fn openapi(&self) -> impl std::future::Future<Output = Result<OpenApiSpec, Error>> + Send;
 
     // /// Construct [`Swagger`] using the LCU API.
     // async fn swagger(&self) -> Result<Swagger, Error>;
@@ -61,26 +68,27 @@ impl<T: RequestClientTrait + Clone> PoroSchema
 
         // Get help for all types
         for ty_name in help.types.keys() {
-            let endpoint = format!("/help?target={}&format=Full", ty_name);
+            let endpoint = format!("/help?target={ty_name}&format=Full");
             let SeqFirst::<Type>(full) = self.post(endpoint, "").await?;
             full_types.push(full);
         }
 
         // Get help for all events
         for ev_name in help.events.keys() {
-            let endpoint = format!("/help?target={}&format=Full", ev_name);
+            let endpoint = format!("/help?target={ev_name}&format=Full");
             let SeqFirst::<Event>(full) = self.post(endpoint, "").await?;
             full_events.push(full);
         }
 
         // Get help for all endpoints
+        let reg = regex::Regex::new(r"\{(.*?)\}");
         for fn_name in help.functions.keys() {
-            let endpoint = format!("/help?target={}&format=Full", fn_name);
+            let endpoint = format!("/help?target={fn_name}&format=Full");
             let SeqFirst::<Endpoint>(mut full) = self.post(endpoint, "").await?;
 
             // Finish construction using data from console help.
             {
-                let endpoint = format!("/help?target={}&format=Console", fn_name);
+                let endpoint = format!("/help?target={fn_name}&format=Console");
                 let mut console: serde_json::Value = self.post(endpoint, "").await?;
                 let console = console
                     .as_object_mut()
@@ -89,8 +97,7 @@ impl<T: RequestClientTrait + Clone> PoroSchema
                 if let Some(console) = console.remove(fn_name) {
                     let console: ConsoleEndpointInner = serde_json::from_value(console)?;
                     full.path_params = if let Some(url) = console.url.as_ref() {
-                        regex::Regex
-                            ::new(r"\{(.*?)\}")
+                        reg.clone()
                             .unwrap()
                             .captures_iter(url.as_str())
                             .map(|cap| cap[1].to_string())
@@ -174,11 +181,11 @@ impl<T: RequestClientTrait + Clone> PoroSchema
 
         let full_endpoints = full_endpoints
             .into_iter()
-            .filter_map(|json| {
+            .map(|json| {
                 match serde_json::from_value::<Endpoint>(json) {
-                    Ok(endpoint) => Some(endpoint),
+                    Ok(endpoint) => endpoint,
                     Err(e) => {
-                        panic!("Something major changed in the API. Please report this error: {}", e);
+                        panic!("Something major changed in the API. Please report this error: {e}");
                     }
                 }
             })
@@ -212,7 +219,7 @@ impl<T: RequestClientTrait + Clone> PoroSchema
             info: OpenApiInfo {
                 title: "LCU PORO-SCHEMA".to_string(),
                 description: "OpenAPI v3 specification for LCU".to_string(),
-                version: version,
+                version,
             },
             components: serde_json::Map::new(),
             paths: serde_json::Map::new(),

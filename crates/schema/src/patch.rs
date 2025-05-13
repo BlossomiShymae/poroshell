@@ -141,11 +141,7 @@ impl Patch for Value {
                         return Err(
                             serde_json::Error
                                 ::custom(
-                                    format!(
-                                        "Expected an object at path {}, found {}",
-                                        path,
-                                        current
-                                    )
+                                    format!("Expected an object at path {path}, found {current}")
                                 )
                                 .into()
                         );
@@ -165,14 +161,16 @@ impl Patch for Value {
                                 .get_mut(index)
                                 .ok_or_else(||
                                     serde_json::Error::custom(
-                                        format!("Index {} not found at path {}", index, path)
+                                        format!("Index {index} not found at path {path}")
                                     )
                                 )?;
                         }
                     } else {
                         return Err(
                             serde_json::Error
-                                ::custom(format!("Expected an array at path {}", path))
+                                ::custom(
+                                    format!("Expected an array at path {path}, found {current}")
+                                )
                                 .into()
                         );
                     }
@@ -197,7 +195,9 @@ impl Patch for Value {
                             return Err(
                                 serde_json::Error
                                     ::custom(
-                                        format!("Wildcard expected an object or array at path {}", path)
+                                        format!(
+                                            "Wildcard expected an object or array at path {path} but found {current}"
+                                        )
                                     )
                                     .into()
                             );
@@ -211,7 +211,7 @@ impl Patch for Value {
 
         Err(
             serde_json::Error
-                ::custom(format!("Failed to patch value at path {}: no terminal target", path))
+                ::custom(format!("Failed to patch value at path {path}: no terminal target"))
                 .into()
         )
     }

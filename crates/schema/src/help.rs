@@ -172,6 +172,7 @@ pub struct StringMap {
 
 impl StringMap {
     /// Get the value for a key, or None if the key is not present or if the value was empty.
+    #[allow(dead_code)]
     pub fn get(&self, key: &str) -> Option<&str> {
         if self.empty.contains(key) { None } else { self.values.get(key).map(|s| s.as_str()) }
     }
@@ -182,24 +183,18 @@ impl StringMap {
     }
 
     /// Returns a boolean indicating whether the map contains a key.
+    #[allow(dead_code)]
     pub fn contains_key(&self, key: &str) -> bool {
         self.values.contains_key(key) || self.empty.contains(key)
     }
 
     /// Returns an iterator over entries in the map.
+    #[allow(dead_code)]
     pub fn iter(&self) -> impl Iterator<Item = (&str, Option<&str>)> {
         self.values
             .iter()
             .map(|(k, v)| (k.as_str(), Some(v.as_str())))
             .chain(self.empty.iter().map(|k| (k.as_str(), None)))
-    }
-
-    /// Consumes self, returning a new iterator over entries in the map.
-    pub fn into_iter(self) -> impl Iterator<Item = (String, Option<String>)> {
-        self.values
-            .into_iter()
-            .map(|(k, v)| (k, Some(v)))
-            .chain(self.empty.into_iter().map(|k| (k, None)))
     }
 }
 
@@ -258,7 +253,7 @@ fn deserialize_bool_any<'de, D>(deserializer: D) -> Result<bool, D::Error>
 
     match Value::deserialize(deserializer)? {
         Value::Bool(b) => Ok(b),
-        Value::Number(n) => Ok(n.as_i64().map_or(false, |i| i != 0)),
+        Value::Number(n) => Ok(n.as_i64().is_some_and(|i| i != 0)),
         Value::String(s) => {
             match s.trim().to_lowercase().as_str() {
                 "true" | "1" | "yes" | "y" | "on" => Ok(true),
@@ -275,7 +270,7 @@ fn deserialize_bool_any<'de, D>(deserializer: D) -> Result<bool, D::Error>
         v =>
             Err(
                 Error::invalid_type(
-                    Unexpected::Other(&format!("{:?}", v)),
+                    Unexpected::Other(&format!("{v:?}")),
                     &"a bool, number, or boolean-like string"
                 )
             ),
@@ -298,7 +293,7 @@ fn deserialize_string_option<'de, D>(deserializer: D) -> Result<Option<String>, 
         v =>
             Err(
                 D::Error::invalid_type(
-                    Unexpected::Other(&format!("{:?}", v)),
+                    Unexpected::Other(&format!("{v:?}")),
                     &"a string, null, or empty string"
                 )
             ),
@@ -312,6 +307,6 @@ fn deserialize_console_url<'de, D>(deserializer: D) -> Result<Option<String>, D:
     if s.is_empty() {
         Ok(None)
     } else {
-        Ok(Some(if s.starts_with('/') { s } else { format!("/{}", s) }))
+        Ok(Some(if s.starts_with('/') { s } else { format!("/{s}") }))
     }
 }
