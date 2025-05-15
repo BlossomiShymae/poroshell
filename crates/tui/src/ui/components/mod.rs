@@ -1,2 +1,2 @@
-pub mod phantom_listener;
-pub mod radio_navigation;
+pub mod global_listener;
+pub mod pages;

@@ -8,11 +8,11 @@ use tuirealm::{
 use crate::msgs::Msg;
 
 #[derive(MockComponent)]
-pub struct PhantomListener {
+pub struct GlobalListener {
     component: Phantom,
 }
 
-impl PhantomListener {
+impl GlobalListener {
     pub fn new() -> Self {
         Self {
             component: Phantom::default(),
@@ -20,7 +20,7 @@ impl PhantomListener {
     }
 }
 
-impl Component<Msg, NoUserEvent> for PhantomListener {
+impl Component<Msg, NoUserEvent> for GlobalListener {
     fn on(&mut self, ev: tuirealm::Event<NoUserEvent>) -> Option<Msg> {
         match ev {
             tuirealm::Event::Keyboard(key_event) => {

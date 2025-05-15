@@ -10,13 +10,14 @@ use tuirealm::{
 
 use crate::{ids::Id, msgs::Msg};
 
-use super::components::{phantom_listener::PhantomListener, radio_navigation::RadioNavigation};
+use super::components::{global_listener::GlobalListener, pages::Page};
 
 pub struct Model {
     pub app: Application<Id, Msg, NoUserEvent>,
     pub terminal: TerminalBridge<CrosstermTerminalAdapter>,
     pub quit: bool,
     pub redraw: bool,
+    pub page: Page,
 }
 
 impl Model {
@@ -30,6 +31,7 @@ impl Model {
             terminal,
             quit: false,
             redraw: true,
+            page: Page::Home,
         }
     }
 
@@ -47,8 +49,8 @@ impl Model {
 
     fn mount_main(app: &mut Application<Id, Msg, NoUserEvent>) -> Result<()> {
         app.mount(
-            Id::PhantomListener,
-            Box::new(PhantomListener::new()),
+            Id::GlobalListener,
+            Box::new(GlobalListener::new()),
             vec![
                 Sub::new(
                     SubEventClause::Keyboard(KeyEvent {
@@ -66,11 +68,8 @@ impl Model {
                 ),
             ],
         )?;
-        app.mount(
-            Id::RadioNavigation,
-            Box::new(RadioNavigation::new()),
-            Vec::new(),
-        )?;
+
+        Self::mount_home(app)?;
 
         Ok(())
     }
@@ -78,16 +77,9 @@ impl Model {
     pub fn view(&mut self) {
         if self.redraw {
             self.redraw = false;
-
-            let _ = self.terminal.raw_mut().draw(|f| {
-                let chunks = Layout::default()
-                    .direction(Direction::Vertical)
-                    .margin(1)
-                    .constraints([Constraint::Length(3), Constraint::Length(1)].as_ref())
-                    .split(f.area());
-
-                self.app.view(&Id::RadioNavigation, f, chunks[0]);
-            });
+            match self.page {
+                Page::Home => self.view_page_home(),
+            }
         }
     }
 
