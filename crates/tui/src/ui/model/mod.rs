@@ -1,13 +1,17 @@
+pub mod update;
+pub mod view;
 use std::time::Duration;
 
 use color_eyre::eyre::Result;
+use data::RiotAPILibrary;
+use tokio::sync::mpsc::UnboundedSender;
 use tuirealm::{
-    Application, EventListenerCfg, NoUserEvent, Sub, SubClause, SubEventClause, Update,
+    Application, EventListenerCfg, NoUserEvent, Sub, SubClause, SubEventClause,
     event::{Key, KeyEvent, KeyModifiers},
     terminal::{CrosstermTerminalAdapter, TerminalBridge},
 };
 
-use crate::{ids::Id, msgs::Msg};
+use crate::{cmds::BackgroundCmd, ids::Id, msgs::Msg};
 
 use super::components::{global_listener::GlobalListener, pages::Page};
 
@@ -17,10 +21,12 @@ pub struct Model {
     pub quit: bool,
     pub redraw: bool,
     pub page: Page,
+    pub bg_tx: UnboundedSender<BackgroundCmd>,
+    pub libraries: Option<Vec<RiotAPILibrary>>,
 }
 
 impl Model {
-    pub async fn new() -> Self {
+    pub async fn new(bg_tx: UnboundedSender<BackgroundCmd>) -> Self {
         let terminal = TerminalBridge::init_crossterm().expect("Cannot create terminal bridge");
 
         let app = Self::init_app();
@@ -31,6 +37,8 @@ impl Model {
             quit: false,
             redraw: true,
             page: Page::Home,
+            bg_tx,
+            libraries: None,
         }
     }
 
@@ -75,14 +83,6 @@ impl Model {
         Ok(())
     }
 
-    pub fn view(&mut self) {
-        if self.redraw {
-            match self.page {
-                Page::Home => self.view_page_home(),
-            }
-        }
-    }
-
     pub fn init_terminal(&mut self) {
         let _ = self.terminal.enable_raw_mode();
         let _ = self.terminal.enter_alternate_screen();
@@ -92,18 +92,5 @@ impl Model {
     pub fn finalize_terminal(&mut self) {
         let _ = self.terminal.disable_raw_mode();
         let _ = self.terminal.leave_alternate_screen();
-    }
-}
-
-impl Update<Msg> for Model {
-    fn update(&mut self, msg: Option<Msg>) -> Option<Msg> {
-        self.redraw = true;
-        match msg.unwrap_or(Msg::None) {
-            Msg::AppClose => {
-                self.quit = true;
-                None
-            }
-            Msg::None => None,
-        }
     }
 }

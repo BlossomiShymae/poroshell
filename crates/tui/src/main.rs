@@ -3,6 +3,7 @@ use std::error::Error;
 use tracing::debug;
 use ui::UI;
 
+mod cmds;
 mod ids;
 mod logger;
 mod msgs;

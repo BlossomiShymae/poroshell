@@ -1,4 +1,6 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
+
+use serde::Deserialize;
 
 pub type Plugins = BTreeMap<String, Vec<Plugin>>;
 
@@ -110,6 +112,14 @@ impl Plugin {
     pub fn operation(&self) -> openapi::types::Operation {
         self.operation.clone()
     }
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct RiotAPILibrary {
+    pub owner: String,
+    pub repo: String,
+    pub language: String,
+    pub tags: Option<Vec<String>>,
 }
 
 #[cfg(test)]
