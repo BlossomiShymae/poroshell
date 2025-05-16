@@ -2,7 +2,7 @@ use tui_realm_stdlib::List;
 use tuirealm::{
     Component, MockComponent, NoUserEvent,
     command::CmdResult,
-    props::{Alignment, BorderType, Borders, Color},
+    props::{Alignment, BorderType, Borders},
 };
 
 use crate::msgs::Msg;

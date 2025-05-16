@@ -4,7 +4,6 @@ use color_eyre::eyre::Result;
 use tuirealm::{
     Application, EventListenerCfg, NoUserEvent, Sub, SubClause, SubEventClause, Update,
     event::{Key, KeyEvent, KeyModifiers},
-    ratatui::layout::{Constraint, Direction, Layout},
     terminal::{CrosstermTerminalAdapter, TerminalBridge},
 };
 
@@ -44,6 +43,8 @@ impl Model {
         );
 
         Self::mount_main(&mut app).unwrap();
+        let _ = app.active(&Id::Libraries);
+
         app
     }
 
@@ -76,7 +77,6 @@ impl Model {
 
     pub fn view(&mut self) {
         if self.redraw {
-            self.redraw = false;
             match self.page {
                 Page::Home => self.view_page_home(),
             }
@@ -97,9 +97,7 @@ impl Model {
 
 impl Update<Msg> for Model {
     fn update(&mut self, msg: Option<Msg>) -> Option<Msg> {
-        // Set redraw
         self.redraw = true;
-        // Match message
         match msg.unwrap_or(Msg::None) {
             Msg::AppClose => {
                 self.quit = true;

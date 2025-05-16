@@ -2,7 +2,7 @@ use tui_realm_stdlib::{Container, Label};
 use tuirealm::{
     Component, MockComponent, NoUserEvent,
     command::CmdResult,
-    props::{Alignment, BorderType, Borders, Color, Layout},
+    props::{BorderType, Borders, Layout},
     ratatui::layout::{Constraint, Direction},
 };
 

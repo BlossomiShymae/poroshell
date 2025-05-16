@@ -26,11 +26,9 @@ impl UI {
     async fn run_inner(&mut self) -> Result<()> {
         while !self.model.quit {
             // Tick
-            match self.model.app.tick(PollStrategy::UpTo(20)) {
-                Ok(messages) if !messages.is_empty() => {
-                    // NOTE: redraw if at least one message is processed
-                    self.model.redraw = true;
-                    for msg in messages {
+            match self.model.app.tick(PollStrategy::Once) {
+                Ok(messages) => {
+                    for msg in messages.into_iter() {
                         let mut msg = Some(msg);
                         while msg.is_some() {
                             msg = self.model.update(msg);
@@ -38,11 +36,13 @@ impl UI {
                     }
                 }
                 Err(_) => todo!(),
-                _ => {}
             }
 
             // Redraw
-            self.model.view();
+            if self.model.redraw {
+                self.model.view();
+                self.model.redraw = false;
+            }
         }
 
         Ok(())
