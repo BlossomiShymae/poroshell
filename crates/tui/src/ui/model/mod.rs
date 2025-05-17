@@ -51,6 +51,7 @@ impl Model {
         );
 
         Self::mount_main(&mut app).unwrap();
+        let _ = app.active(&Id::Navigation);
         let _ = app.active(&Id::Libraries);
 
         app

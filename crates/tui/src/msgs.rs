@@ -3,6 +3,8 @@ pub enum Msg {
     AppClose,
     LibrariesInit,
     LibrariesSubmit(usize),
+    LibrariesBlur,
+    NavigationBlur,
     QuitDialogShow,
     QuitDialogCancel,
     QuitDialogOk,

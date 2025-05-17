@@ -1,3 +1,4 @@
+use color_eyre::owo_colors::OwoColorize;
 use data::RiotAPILibrary;
 use tui_realm_stdlib::Table;
 use tuirealm::{
@@ -22,8 +23,8 @@ impl Libraries {
                 .title("Libraries", Alignment::Center)
                 .borders(Borders::default().modifiers(BorderType::Rounded))
                 .scroll(true)
-                .highlighted_color(Color::LightRed)
                 .rewind(true)
+                .highlighted_color(Color::White)
                 .step(4)
                 .row_height(1)
                 .headers(&["Owner", "Repo", "Language"])
@@ -41,6 +42,7 @@ impl Component<Msg, NoUserEvent> for Libraries {
                 self.init = true;
                 Some(Msg::LibrariesInit)
             }
+            Event::Keyboard(KeyEvent { code: Key::Tab, .. }) => Some(Msg::LibrariesBlur),
             Event::Keyboard(KeyEvent {
                 code: Key::Down, ..
             }) => {
@@ -83,6 +85,13 @@ impl Component<Msg, NoUserEvent> for Libraries {
 }
 
 impl Model {
+    pub fn blur_libraries(&mut self) {
+        self.app
+            .attr(&Id::Libraries, Attribute::Focus, AttrValue::Flag(false))
+            .ok();
+        self.app.active(&Id::Navigation).ok();
+    }
+
     pub fn update_libraries(&mut self, libraries: Vec<RiotAPILibrary>) {
         let current_libraries = libraries
             .into_iter()

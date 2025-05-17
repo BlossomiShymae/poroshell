@@ -1,11 +1,12 @@
 use tui_realm_stdlib::List;
 use tuirealm::{
-    Component, MockComponent, NoUserEvent,
+    AttrValue, Attribute, Component, Event, MockComponent, NoUserEvent,
     command::CmdResult,
+    event::{Key, KeyEvent},
     props::{Alignment, BorderType, Borders, TableBuilder, TextSpan},
 };
 
-use crate::msgs::Msg;
+use crate::{ids::Id, msgs::Msg, ui::model::Model};
 
 #[derive(MockComponent)]
 pub struct Navigation {
@@ -33,8 +34,18 @@ impl Navigation {
 impl Component<Msg, NoUserEvent> for Navigation {
     fn on(&mut self, ev: tuirealm::Event<NoUserEvent>) -> Option<Msg> {
         let _ = match ev {
+            Event::Keyboard(KeyEvent { code: Key::Tab, .. }) => return Some(Msg::NavigationBlur),
             _ => CmdResult::None,
         };
         Some(Msg::None)
+    }
+}
+
+impl Model {
+    pub fn blur_navigation(&mut self) {
+        self.app
+            .attr(&Id::Navigation, Attribute::Focus, AttrValue::Flag(false))
+            .ok();
+        self.app.active(&Id::Libraries).ok();
     }
 }

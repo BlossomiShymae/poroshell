@@ -1,6 +1,6 @@
-use tuirealm::Update;
+use tuirealm::{AttrValue, Attribute, Update};
 
-use crate::{cmds::BackgroundCmd, msgs::Msg};
+use crate::{cmds::BackgroundCmd, ids::Id, msgs::Msg};
 
 use super::Model;
 
@@ -35,6 +35,14 @@ impl Update<Msg> for Model {
                         self.bg_tx.send(BackgroundCmd::LibrariesOpenLink(link)).ok();
                     }
                 }
+                None
+            }
+            Msg::LibrariesBlur => {
+                self.blur_libraries();
+                None
+            }
+            Msg::NavigationBlur => {
+                self.blur_navigation();
                 None
             }
             Msg::None => None,
