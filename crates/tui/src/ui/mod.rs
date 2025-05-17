@@ -1,3 +1,4 @@
+pub mod utils;
 pub mod background;
 use std::sync::Arc;
 

@@ -4,4 +4,5 @@ pub enum Id {
     Libraries,
     Navigation,
     Welcome,
+    QuitDialog,
 }

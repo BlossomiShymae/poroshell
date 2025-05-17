@@ -41,6 +41,7 @@ impl UI {
     ) -> Result<()> {
         let libraries = reqwest::get("https://raw.githubusercontent.com/BlossomiShymae/poroschema/refs/heads/main/other/libraries.json")
             .await?
+            .error_for_status()?
             .json::<Vec<RiotAPILibrary>>()
             .await?;
 

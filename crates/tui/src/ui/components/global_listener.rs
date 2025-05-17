@@ -32,7 +32,7 @@ impl Component<Msg, NoUserEvent> for GlobalListener {
                     "Key pressed"
                 );
                 match key_event.code {
-                    Key::Esc => Some(Msg::AppClose),
+                    Key::Esc => Some(Msg::QuitDialogShow),
                     Key::Char('c') if key_event.modifiers == KeyModifiers::CONTROL => {
                         Some(Msg::AppClose)
                     }

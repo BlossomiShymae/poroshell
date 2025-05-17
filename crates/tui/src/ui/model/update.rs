@@ -12,6 +12,18 @@ impl Update<Msg> for Model {
                 self.quit = true;
                 None
             }
+            Msg::QuitDialogShow => {
+                self.mount_quit_dialog();
+                None
+            }
+            Msg::QuitDialogOk => {
+                self.quit = true;
+                None
+            }
+            Msg::QuitDialogCancel => {
+                self.umount_quit_dialog();
+                None
+            }
             Msg::LibrariesInit => {
                 self.bg_tx.send(BackgroundCmd::LibrariesLoad).ok();
                 None
