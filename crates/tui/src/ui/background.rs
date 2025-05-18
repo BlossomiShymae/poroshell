@@ -6,20 +6,22 @@ use tokio::sync::{
     Mutex,
     mpsc::{UnboundedReceiver, UnboundedSender},
 };
-use tracing::error;
+use tracing::{debug, error};
 
 use crate::cmds::{BackgroundCmd, BackgroundCmdResult};
 
 use super::UI;
 
 impl UI {
-    pub fn run_background(&self) -> Result<()> {
+    pub fn run_background(&self) {
         let rx: Arc<Mutex<UnboundedReceiver<BackgroundCmd>>> = self.bg_rx.clone();
         let tx: Arc<Mutex<UnboundedSender<BackgroundCmdResult>>> = self.result_tx.clone();
         tokio::spawn(async move {
             let mut lock = rx.lock().await;
             // Tick background
             while let Some(msg) = lock.recv().await {
+                let printed_msg = format!("{msg:?}");
+                debug!(msg = printed_msg, "Received background message");
                 let result = match msg {
                     BackgroundCmd::LibrariesLoad => Self::load_libraries(tx.clone()).await,
                     BackgroundCmd::LibrariesOpenLink(link) => Self::open_library_link(link),
@@ -32,8 +34,6 @@ impl UI {
                 }
             }
         });
-
-        Ok(())
     }
 
     async fn load_libraries(

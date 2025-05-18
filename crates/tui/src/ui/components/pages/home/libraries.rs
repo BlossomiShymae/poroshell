@@ -1,9 +1,8 @@
-use color_eyre::owo_colors::OwoColorize;
 use data::RiotAPILibrary;
 use tui_realm_stdlib::Table;
 use tuirealm::{
     AttrValue, Attribute, Component, Event, MockComponent, NoUserEvent,
-    command::{Cmd, Direction, Position},
+    command::{Cmd, CmdResult, Direction, Position},
     event::{Key, KeyEvent},
     props::{Alignment, BorderType, Borders, Color, TableBuilder, TextSpan},
 };
@@ -37,50 +36,38 @@ impl Libraries {
 
 impl Component<Msg, NoUserEvent> for Libraries {
     fn on(&mut self, ev: tuirealm::Event<NoUserEvent>) -> Option<Msg> {
-        match ev {
+        let _cmd_result = match ev {
             Event::Tick if !self.init => {
                 self.init = true;
-                Some(Msg::LibrariesInit)
+                return Some(Msg::LibrariesInit);
             }
-            Event::Keyboard(KeyEvent { code: Key::Tab, .. }) => Some(Msg::LibrariesBlur),
+            Event::Keyboard(KeyEvent { code: Key::Tab, .. }) => return Some(Msg::LibrariesBlur),
             Event::Keyboard(KeyEvent {
                 code: Key::Down, ..
-            }) => {
-                self.perform(Cmd::Move(Direction::Down));
-                Some(Msg::None)
-            }
+            }) => self.perform(Cmd::Move(Direction::Down)),
             Event::Keyboard(KeyEvent { code: Key::Up, .. }) => {
-                self.perform(Cmd::Move(Direction::Up));
-                Some(Msg::None)
+                self.perform(Cmd::Move(Direction::Up))
             }
             Event::Keyboard(KeyEvent {
                 code: Key::PageDown,
                 ..
-            }) => {
-                self.perform(Cmd::Scroll(Direction::Down));
-                Some(Msg::None)
-            }
+            }) => self.perform(Cmd::Scroll(Direction::Down)),
             Event::Keyboard(KeyEvent {
                 code: Key::PageUp, ..
-            }) => {
-                self.perform(Cmd::Scroll(Direction::Up));
-                Some(Msg::None)
-            }
+            }) => self.perform(Cmd::Scroll(Direction::Up)),
             Event::Keyboard(KeyEvent {
                 code: Key::Home, ..
-            }) => {
-                self.perform(Cmd::GoTo(Position::Begin));
-                Some(Msg::None)
-            }
+            }) => self.perform(Cmd::GoTo(Position::Begin)),
             Event::Keyboard(KeyEvent { code: Key::End, .. }) => {
-                self.perform(Cmd::GoTo(Position::End));
-                Some(Msg::None)
+                self.perform(Cmd::GoTo(Position::End))
             }
             Event::Keyboard(KeyEvent {
                 code: Key::Enter, ..
-            }) => Some(Msg::LibrariesSubmit(self.component.states.list_index)),
-            _ => Some(Msg::None),
-        }
+            }) => return Some(Msg::LibrariesSubmit(self.component.states.list_index)),
+            _ => CmdResult::None,
+        };
+
+        Some(Msg::None)
     }
 }
 
@@ -99,7 +86,7 @@ impl Model {
             .collect::<Vec<RiotAPILibrary>>();
         self.libraries = Some(current_libraries.clone());
         let mut table = TableBuilder::default();
-        for library in current_libraries.into_iter() {
+        for library in current_libraries {
             table.add_col(TextSpan::from(library.owner));
             table.add_col(TextSpan::from(library.repo));
             table.add_col(TextSpan::from(library.language));

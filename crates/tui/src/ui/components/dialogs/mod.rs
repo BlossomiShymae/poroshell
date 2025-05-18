@@ -17,9 +17,7 @@ pub struct DialogStyle {
 
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub enum DialogType {
-    Info,
     Warning,
-    Error,
 }
 
 #[derive(MockComponent)]
@@ -28,11 +26,9 @@ pub struct Dialog {
 }
 
 impl Dialog {
-    pub fn new<T: Into<String>>(title: T, style: DialogStyle) -> Self {
+    pub fn new<T: Into<String>>(title: T, style: &DialogStyle) -> Self {
         let border_color = match style.dialog_type {
-            DialogType::Info => Color::LightBlue,
             DialogType::Warning => Color::LightYellow,
-            DialogType::Error => Color::LightRed,
         };
 
         Self {
@@ -49,7 +45,7 @@ impl Dialog {
         }
     }
 
-    pub fn on(&mut self, ev: Event<NoUserEvent>, on_ok: Msg, on_cancel: Msg) -> Option<Msg> {
+    pub fn on(&mut self, ev: &Event<NoUserEvent>, on_ok: Msg, on_cancel: Msg) -> Option<Msg> {
         let cmd_result = match ev {
             Event::Keyboard(KeyEvent { code: Key::Esc, .. }) => return Some(on_cancel),
             Event::Keyboard(KeyEvent {

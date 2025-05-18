@@ -26,7 +26,7 @@ pub struct Model {
 }
 
 impl Model {
-    pub async fn new(bg_tx: UnboundedSender<BackgroundCmd>) -> Self {
+    pub fn new(bg_tx: UnboundedSender<BackgroundCmd>) -> Self {
         let terminal = TerminalBridge::init_crossterm().expect("Cannot create terminal bridge");
 
         let app = Self::init_app();
@@ -51,8 +51,8 @@ impl Model {
         );
 
         Self::mount_main(&mut app).unwrap();
-        let _ = app.active(&Id::Navigation);
-        let _ = app.active(&Id::Libraries);
+        app.active(&Id::Navigation).ok();
+        app.active(&Id::Libraries).ok();
 
         app
     }

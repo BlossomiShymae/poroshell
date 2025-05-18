@@ -33,7 +33,7 @@ impl Navigation {
 
 impl Component<Msg, NoUserEvent> for Navigation {
     fn on(&mut self, ev: tuirealm::Event<NoUserEvent>) -> Option<Msg> {
-        let _ = match ev {
+        let _cmd_result = match ev {
             Event::Keyboard(KeyEvent { code: Key::Tab, .. }) => return Some(Msg::NavigationBlur),
             _ => CmdResult::None,
         };

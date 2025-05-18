@@ -2,6 +2,7 @@ use tracing::debug;
 use tui_realm_stdlib::Phantom;
 use tuirealm::{
     Component, MockComponent, NoUserEvent,
+    command::CmdResult,
     event::{Key, KeyModifiers},
 };
 
@@ -22,7 +23,7 @@ impl GlobalListener {
 
 impl Component<Msg, NoUserEvent> for GlobalListener {
     fn on(&mut self, ev: tuirealm::Event<NoUserEvent>) -> Option<Msg> {
-        match ev {
+        let _cmd_result = match ev {
             tuirealm::Event::Keyboard(key_event) => {
                 let printed_modifier = format!("{:?}", key_event.modifiers);
                 let printed_code = format!("{:?}", key_event.code);
@@ -32,14 +33,16 @@ impl Component<Msg, NoUserEvent> for GlobalListener {
                     "Key pressed"
                 );
                 match key_event.code {
-                    Key::Esc => Some(Msg::QuitDialogShow),
+                    Key::Esc => return Some(Msg::QuitDialogShow),
                     Key::Char('c') if key_event.modifiers == KeyModifiers::CONTROL => {
-                        Some(Msg::AppClose)
+                        return Some(Msg::AppClose);
                     }
-                    _ => Some(Msg::None),
+                    _ => CmdResult::None,
                 }
             }
-            _ => Some(Msg::None),
-        }
+            _ => CmdResult::None,
+        };
+
+        Some(Msg::None)
     }
 }

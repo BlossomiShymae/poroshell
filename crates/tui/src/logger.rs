@@ -14,7 +14,7 @@ pub fn setup() {
         .unwrap();
 
     let _ = fs::create_dir_all("logs");
-    let debug_filename = format!("logs/debug-{}.log", now);
+    let debug_filename = format!("logs/debug-{now}.log");
     let debug_file = OpenOptions::new()
         .append(true)
         .create(true)

@@ -1,3 +1,8 @@
+#![warn(clippy::pedantic)]
+#![warn(clippy::perf)]
+#![deny(warnings)]
+#![forbid(unsafe_code)]
+
 use std::error::Error;
 
 use tracing::debug;
@@ -14,9 +19,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     logger::setup();
 
     debug!("Creating UI");
-    let mut ui = UI::new().await?;
+    let mut ui = UI::new();
     debug!("Running UI");
-    ui.run().await?;
+    ui.run();
 
     Ok(())
 }

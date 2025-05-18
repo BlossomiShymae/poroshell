@@ -1,6 +1,5 @@
 use tuirealm::{
-    Application, Component, Frame, MockComponent, NoUserEvent,
-    props::{Alignment, Color},
+    Application, Component, Frame, MockComponent, NoUserEvent, props::Alignment,
     ratatui::widgets::Clear,
 };
 
@@ -21,7 +20,7 @@ impl QuitDialog {
     pub fn new() -> Self {
         let component = Dialog::new(
             " Are you sure you want to quit? ",
-            DialogStyle {
+            &DialogStyle {
                 dialog_type: DialogType::Warning,
                 title_alignment: Alignment::Center,
             },
@@ -34,7 +33,7 @@ impl QuitDialog {
 impl Component<Msg, NoUserEvent> for QuitDialog {
     fn on(&mut self, ev: tuirealm::Event<NoUserEvent>) -> Option<Msg> {
         self.component
-            .on(ev, Msg::QuitDialogOk, Msg::QuitDialogCancel)
+            .on(&ev, Msg::QuitDialogOk, Msg::QuitDialogCancel)
     }
 }
 

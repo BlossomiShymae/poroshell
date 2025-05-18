@@ -1,7 +1,6 @@
 use tui_realm_stdlib::{Container, Label};
 use tuirealm::{
     Component, MockComponent, NoUserEvent,
-    command::CmdResult,
     props::{BorderType, Borders, Layout},
     ratatui::layout::{Constraint, Direction},
 };
@@ -32,10 +31,7 @@ impl Welcome {
 }
 
 impl Component<Msg, NoUserEvent> for Welcome {
-    fn on(&mut self, ev: tuirealm::Event<NoUserEvent>) -> Option<Msg> {
-        let _ = match ev {
-            _ => CmdResult::None,
-        };
+    fn on(&mut self, _ev: tuirealm::Event<NoUserEvent>) -> Option<Msg> {
         Some(Msg::None)
     }
 }

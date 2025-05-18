@@ -1,6 +1,6 @@
-use tuirealm::{AttrValue, Attribute, Update};
+use tuirealm::Update;
 
-use crate::{cmds::BackgroundCmd, ids::Id, msgs::Msg};
+use crate::{cmds::BackgroundCmd, msgs::Msg};
 
 use super::Model;
 
@@ -8,25 +8,17 @@ impl Update<Msg> for Model {
     fn update(&mut self, msg: Option<Msg>) -> Option<Msg> {
         self.redraw = true;
         match msg.unwrap_or(Msg::None) {
-            Msg::AppClose => {
-                self.quit = true;
-                None
-            }
             Msg::QuitDialogShow => {
                 self.mount_quit_dialog();
-                None
             }
-            Msg::QuitDialogOk => {
+            Msg::QuitDialogOk | Msg::AppClose => {
                 self.quit = true;
-                None
             }
             Msg::QuitDialogCancel => {
                 self.umount_quit_dialog();
-                None
             }
             Msg::LibrariesInit => {
                 self.bg_tx.send(BackgroundCmd::LibrariesLoad).ok();
-                None
             }
             Msg::LibrariesSubmit(index) => {
                 if let Some(libraries) = self.libraries.take() {
@@ -35,17 +27,16 @@ impl Update<Msg> for Model {
                         self.bg_tx.send(BackgroundCmd::LibrariesOpenLink(link)).ok();
                     }
                 }
-                None
             }
             Msg::LibrariesBlur => {
                 self.blur_libraries();
-                None
             }
             Msg::NavigationBlur => {
                 self.blur_navigation();
-                None
             }
-            Msg::None => None,
+            Msg::None => (),
         }
+
+        None
     }
 }
