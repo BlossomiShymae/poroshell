@@ -1,8 +1,16 @@
+use std::str::FromStr;
+
+use derive_more::Display;
 use fxhash::{ FxHashMap, FxHashSet };
-use serde::{ de::Visitor, ser::{ SerializeMap, SerializeSeq }, Deserialize, Serialize };
+use serde::{
+    de::{ Deserializer, Visitor },
+    ser::{ SerializeMap, SerializeSeq },
+    Deserialize,
+    Serialize,
+};
 
 /// Constructed using multiple API calls to get all the types, endpoints, and events.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ExtendedHelp {
     pub types: Vec<Type>,
     pub endpoints: Vec<Endpoint>,
@@ -17,24 +25,24 @@ pub struct Help {
     pub types: StringMap,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Info {
     pub name: String,
     pub description: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Event {
     #[serde(flatten)]
     pub info: Info,
     #[serde(rename = "nameSpace")]
     pub namespace: String,
     pub tags: Vec<String>,
-    #[serde(rename = "type")]
+    #[serde(default, rename = "type")]
     pub ty: DataType,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Endpoint {
     #[serde(flatten)]
@@ -44,45 +52,65 @@ pub struct Endpoint {
     pub help: String,
     pub arguments: Vec<Argument>,
     pub tags: Vec<String>,
-    #[serde(default, deserialize_with = "deserialize_string_option")]
-    pub method: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_string_option")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<HttpMethod>,
+    #[serde(default, deserialize_with = "crate::serde::de::deserialize_option_string")]
     pub path: Option<String>,
     #[serde(default)]
     pub path_params: Vec<String>,
-    #[serde(rename = "returns")]
+    #[serde(default, rename = "returns")]
     pub return_ty: DataType,
-    #[serde(rename = "async", default, deserialize_with = "deserialize_bool_any")]
+    #[serde(
+        rename = "async",
+        default,
+        deserialize_with = "crate::serde::de::deserialize_bool_coerced"
+    )]
     pub is_async: bool,
-    #[serde(rename = "threadSafe", default, deserialize_with = "deserialize_bool_any")]
+    #[serde(
+        rename = "threadSafe",
+        default,
+        deserialize_with = "crate::serde::de::deserialize_bool_coerced"
+    )]
     pub is_thread_safe: bool,
-    #[serde(rename = "overridden", default, deserialize_with = "deserialize_bool_any")]
+    #[serde(
+        rename = "overridden",
+        default,
+        deserialize_with = "crate::serde::de::deserialize_bool_coerced"
+    )]
     pub is_override: bool,
-    #[serde(rename = "silentOverride", default, deserialize_with = "deserialize_bool_any")]
+    #[serde(
+        rename = "silentOverride",
+        default,
+        deserialize_with = "crate::serde::de::deserialize_bool_coerced"
+    )]
     pub is_silent_override: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct ConsoleEndpointInner {
-    #[serde(default, deserialize_with = "deserialize_string_option")]
-    pub http_method: Option<String>,
+pub(crate) struct ConsoleEndpointInner {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub http_method: Option<HttpMethod>,
     #[serde(default, deserialize_with = "deserialize_console_url")]
     pub url: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Argument {
     #[serde(flatten)]
     pub info: Info,
-    #[serde(rename = "optional", default, deserialize_with = "deserialize_bool_any")]
+    #[serde(
+        rename = "optional",
+        default,
+        deserialize_with = "crate::serde::de::deserialize_bool_coerced"
+    )]
     pub is_optional: bool,
-    #[serde(rename = "type")]
+    #[serde(default, rename = "type")]
     pub ty: DataType,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Type {
     pub values: Vec<Value>,
     pub fields: Vec<Field>,
@@ -94,14 +122,15 @@ pub struct Type {
     pub tags: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Value {
     pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
-    pub value: serde_json::Number,
+    pub value: serde_json::Value,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Field {
     #[serde(flatten)]
@@ -109,19 +138,157 @@ pub struct Field {
 
     pub offset: usize,
 
-    #[serde(rename = "optional", default, deserialize_with = "deserialize_bool_any")]
+    #[serde(
+        rename = "optional",
+        default,
+        deserialize_with = "crate::serde::de::deserialize_bool_coerced"
+    )]
     pub is_optional: bool,
 
-    #[serde(rename = "type")]
+    #[serde(default, rename = "type")]
     pub ty: DataType,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DataType {
     pub element_type: String,
-    #[serde(rename = "type")]
+    #[serde(default, rename = "type")]
     pub ty: String,
+}
+
+impl AsRef<DataType> for DataType {
+    fn as_ref(&self) -> &DataType {
+        self
+    }
+}
+
+impl DataType {
+    #[inline]
+    pub fn string() -> Self {
+        Self {
+            ty: "string".to_string(),
+            element_type: Default::default(),
+        }
+    }
+
+    /// Returns `true` if the type is `"object"` and the element type is empty.
+    #[inline]
+    pub fn is_generic_object(&self) -> bool {
+        self.ty == "object" && self.element_type.is_empty()
+    }
+}
+
+/// HTTP verb (only the ones the client exposes)
+#[derive(Clone, Copy, Debug, Display, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum HttpMethod {
+    #[default]
+    Get,
+    Post,
+    Put,
+    Patch,
+    Delete,
+    Head,
+    Options,
+    Trace,
+}
+
+impl HttpMethod {
+    /// Returns `true` if the http method is [`Get`].
+    ///
+    /// [`Get`]: HttpMethod::Get
+    #[must_use]
+    pub fn is_get(&self) -> bool {
+        matches!(self, Self::Get)
+    }
+}
+
+/// Custom visitor:  null / ""  →  GET
+impl<'de> Deserialize<'de> for HttpMethod {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+        struct Visitor;
+
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = HttpMethod;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("null or an HTTP verb string")
+            }
+
+            fn visit_unit<E>(self) -> Result<Self::Value, E> where E: serde::de::Error {
+                Ok(HttpMethod::Get) // null  -> GET
+            }
+
+            fn visit_none<E>(self) -> Result<Self::Value, E> where E: serde::de::Error {
+                Ok(HttpMethod::Get) // explicit null
+            }
+
+            fn visit_some<D>(self, d: D) -> Result<Self::Value, D::Error> where D: Deserializer<'de> {
+                Deserialize::deserialize(d).and_then(|s: String| {
+                    Ok(match s.to_ascii_uppercase().as_str() {
+                        "GET" => HttpMethod::Get,
+                        "POST" => HttpMethod::Post,
+                        "PUT" => HttpMethod::Put,
+                        "PATCH" => HttpMethod::Patch,
+                        "DELETE" => HttpMethod::Delete,
+                        "HEAD" => HttpMethod::Head,
+                        "OPTIONS" => HttpMethod::Options,
+                        "TRACE" => HttpMethod::Trace,
+                        other => {
+                            return Err(
+                                serde::de::Error::unknown_variant(
+                                    other,
+                                    &[
+                                        "GET",
+                                        "POST",
+                                        "PUT",
+                                        "PATCH",
+                                        "DELETE",
+                                        "HEAD",
+                                        "OPTIONS",
+                                        "TRACE",
+                                    ]
+                                )
+                            );
+                        }
+                    })
+                })
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> where E: serde::de::Error {
+                self.visit_some(serde::de::IntoDeserializer::into_deserializer(v))
+            }
+        }
+
+        deserializer.deserialize_option(Visitor)
+    }
+}
+
+impl FromStr for HttpMethod {
+    type Err = crate::error::ParseError;
+
+    fn from_str(name: &str) -> Result<Self, Self::Err> {
+        if name.starts_with("Get") {
+            Ok(Self::Get)
+        } else if name.starts_with("Post") {
+            Ok(Self::Post)
+        } else if name.starts_with("Put") {
+            Ok(Self::Put)
+        } else if name.starts_with("Patch") {
+            Ok(Self::Patch)
+        } else if name.starts_with("Delete") {
+            Ok(Self::Delete)
+        } else if name.starts_with("Head") {
+            Ok(Self::Head)
+        } else if name.starts_with("Options") {
+            Ok(Self::Options)
+        } else if name.starts_with("Trace") {
+            Ok(Self::Trace)
+        } else {
+            Err(crate::error::ParseError::UnknownHttpMethod)
+        }
+    }
 }
 
 /// A helper type that will only deserialize the first item of a sequence.
@@ -240,63 +407,6 @@ impl<'de> Deserialize<'de> for StringMap {
         }
 
         deserializer.deserialize_map(StringMapVisitor)
-    }
-}
-
-/// Coerces a value to a boolean. Handles "broken" JSON values like
-/// `true`, `false`, `1`, `0`, `yes`, `no`, etc.
-fn deserialize_bool_any<'de, D>(deserializer: D) -> Result<bool, D::Error>
-    where D: serde::Deserializer<'de>
-{
-    use serde_json::Value;
-    use serde::de::{ Error, Unexpected };
-
-    match Value::deserialize(deserializer)? {
-        Value::Bool(b) => Ok(b),
-        Value::Number(n) => Ok(n.as_i64().is_some_and(|i| i != 0)),
-        Value::String(s) => {
-            match s.trim().to_lowercase().as_str() {
-                "true" | "1" | "yes" | "y" | "on" => Ok(true),
-                "" | "false" | "0" | "no" | "n" | "off" => Ok(false),
-                s =>
-                    Err(
-                        Error::invalid_value(
-                            Unexpected::Str(s),
-                            &"a recognized boolean value (.e.g true/false)"
-                        )
-                    ),
-            }
-        }
-        v =>
-            Err(
-                Error::invalid_type(
-                    Unexpected::Other(&format!("{v:?}")),
-                    &"a bool, number, or boolean-like string"
-                )
-            ),
-    }
-}
-
-/// Converts null, empty strings, and "null" to None, and a non-empty string to Some(string).
-/// This is useful for deserializing optional fields that still get sent as empty strings.
-fn deserialize_string_option<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
-    where D: serde::Deserializer<'de>
-{
-    use serde_json::Value;
-    use serde::de::{ Error as DError, Unexpected };
-
-    match Value::deserialize(deserializer)? {
-        Value::Null => Ok(None),
-        Value::String(s) if s.is_empty() => Ok(None),
-        Value::String(s) if s == "null" => Ok(None),
-        Value::String(s) => Ok(Some(s)),
-        v =>
-            Err(
-                D::Error::invalid_type(
-                    Unexpected::Other(&format!("{v:?}")),
-                    &"a string, null, or empty string"
-                )
-            ),
     }
 }
 
