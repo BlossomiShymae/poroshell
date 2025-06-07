@@ -69,13 +69,13 @@ pub trait PoroSchema {
     ///
     /// This is faster than [`extended_help`] because it only queries the LCU API for
     /// the endpoints, but it requires an [`ExtendedHelp`] to be constructed first.
+    ///
+    /// This still uses the poro client to get the current version of the API, so ideally the [`ExtendedHelp`]
+    /// is freshly constructed and up-to-date when used outside of test cases.
     fn openapi(
         &mut self,
         extended_help: ExtendedHelp
     ) -> impl std::future::Future<Output = Result<OpenApiSpec, PoroError<Self::Error>>> + Send;
-
-    // /// Construct [`Swagger`] using the LCU API.
-    // async fn swagger(&self) -> Result<Swagger, Error>;
 }
 
 pub trait PoroClient {
@@ -353,48 +353,88 @@ impl<T: PoroClient + Send> PoroSchema for T {
         &mut self,
         extended_help: ExtendedHelp
     ) -> Result<OpenApiSpec, PoroError<Self::Error>> {
-        #[derive(Deserialize)]
-        struct Version {
-            version: String,
-        }
-        let Version { version } = self
-            .get_lcu("/system/v1/builds").await
-            .map_err(PoroError::Client)?;
+        let info = {
+            #[derive(Deserialize)]
+            struct Version {
+                version: String,
+            }
+            let Version { version } = self
+                .get_lcu("/system/v1/builds").await
+                .map_err(PoroError::Client)?;
 
-        let mut spec = OpenApiSpec::from(OpenApiInfo {
-            title: "LCU PORO-SCHEMA".to_string(),
-            description: Some("OpenAPI v3 specification for LCU".to_string()),
-            version,
-        });
+            OpenApiInfo {
+                title: "LCU PORO-SCHEMA".to_string(),
+                description: Some("OpenAPI v3 specification for LCU".to_string()),
+                version,
+            }
+        };
 
+        OpenApiSpec::from(info)
+            .with_components(&extended_help)?
+            .with_paths(&extended_help)?
+            .with_tags()
+            .map(Ok)
+    }
+}
+
+impl OpenApiSpec {
+    /// Map self to a new type using the provided function.
+    #[inline]
+    pub fn map<T>(self, f: impl FnOnce(Self) -> T) -> T {
+        f(self)
+    }
+
+    /// Consume the spec and return a new spec with resolved components.
+    fn with_components(mut self, help: &ExtendedHelp) -> Result<Self, ParseError> {
+        self.resolve_components(help)?;
+        Ok(self)
+    }
+
+    /// Consume the spec and return a new spec with resolved paths.
+    fn with_paths(mut self, help: &ExtendedHelp) -> Result<Self, ParseError> {
+        self.resolve_paths(help)?;
+        Ok(self)
+    }
+
+    /// Consume the spec and return a new spec with resolved tags.
+    fn with_tags(mut self) -> Self {
+        self.resolve_tags();
+        self
+    }
+
+    /// Mutably resolve components from the extended help.
+    ///
+    /// This method iterates over all types in the `extended_help` and attempts to convert them into
+    /// [`SchemaObject`]s, which are then inserted into the `components` map of the OpenAPI spec.
+    fn resolve_components(&mut self, extended_help: &ExtendedHelp) -> Result<(), ParseError> {
         for ty in &extended_help.types {
             match SchemaObject::try_from(ty) {
                 Ok(schema) => {
-                    spec.components.insert(ty.info.name.clone(), schema);
+                    self.components.insert(ty.info.name.clone(), schema);
                 }
                 Err(ParseError::PrivateApiTypeNotSupported) => {
                     // Silentily ignore this error
                 }
                 Err(e) => {
-                    return Err(e.into());
+                    return Err(e);
                 }
             }
         }
+        Ok(())
+    }
 
-        let mut endpoints_with_missing_data = Vec::<String>::new();
-
+    /// Mutably resolve paths from the extended help.
+    ///
+    /// Create [`PathItem`]s for each endpoint in `extended_help` and populate them with [`Operation`]s.
+    fn resolve_paths(&mut self, extended_help: &ExtendedHelp) -> Result<(), ParseError> {
         for endpoint in &extended_help.endpoints {
-            if endpoint.is_override {
-                endpoints_with_missing_data.push(endpoint.info.name.clone());
-            }
-
             let Some(path) = &endpoint.path else {
                 println!("Endpoint {} does not have an path", endpoint.info.name);
                 continue;
             };
 
-            let operation = endpoint.operation(&spec)?;
-            let entry: &mut _ = spec.paths.entry(path.to_string()).or_default();
+            let operation = endpoint.operation(&*self)?;
+            let entry: &mut _ = self.paths.entry(path.to_string()).or_default();
 
             use help::HttpMethod::*;
             match endpoint.method {
@@ -431,24 +471,13 @@ impl<T: PoroClient + Send> PoroSchema for T {
                 }
             }
         }
-
-        if !endpoints_with_missing_data.is_empty() {
-            println!("Total Endpoints with missing data: {}", endpoints_with_missing_data.len());
-            for name in endpoints_with_missing_data {
-                if let Some(e) = extended_help.endpoints.iter().find(|e| e.info.name == name) {
-                    println!("Missing Endpoint {} is:\n{:#?}", e.info.name, e);
-                }
-            }
-        }
-
-        // process tags
-        spec.resolve_tags();
-
-        Ok(spec)
+        Ok(())
     }
-}
 
-impl OpenApiSpec {
+    /// Mutably resolve tags for the OpenAPI spec.
+    ///
+    /// This method processes the tags from all operations in the spec, filtering and normalizing them,
+    /// and then finally collecting them into the root `tags` field of the spec.
     fn resolve_tags(&mut self) {
         // First pass: collect all tags and count them
         let mut tag_counts: HashMap<String, usize> = HashMap::default();
@@ -544,6 +573,9 @@ impl PartialOrd for Tag {
             }
             (false, true) => {
                 return Some(std::cmp::Ordering::Less);
+            }
+            (true, true) => {
+                return None;
             }
             _ => {}
         }
