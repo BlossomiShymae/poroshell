@@ -42,7 +42,6 @@ pub mod serde;
 pub mod help;
 pub mod error;
 pub mod openapi;
-// pub mod json_agent;
 pub mod patch;
 
 /// Create a new irelia client.
