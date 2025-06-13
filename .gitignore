@@ -1,2 +1,5 @@
 /target
 /logs
+/crates/schema/extended-help.json
+/crates/schema/hasagi-swagger.json
+/crates/schema/openapi.json
