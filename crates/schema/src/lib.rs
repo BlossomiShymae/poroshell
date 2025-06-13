@@ -25,7 +25,7 @@ use help::{
 };
 use ::serde::{ de::DeserializeOwned, Deserialize, Serialize };
 
-/// `use poro_schema::prelude::*;` to import common traits and types.
+/// `use lcu_schema::prelude::*;` to import common traits and types.
 pub mod prelude {
     #[cfg(feature = "irelia")]
     pub use super::lcu;
